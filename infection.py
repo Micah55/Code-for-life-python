@@ -13,8 +13,9 @@ GRID_HEIGHT = SCREEN_HEIGHT // CELL_SIZE
 # Colors
 ZOMBIE_COLOR = (255, 0, 0)  # Red
 HUMAN_COLOR = (0, 0, 255)   # Blue (changed from white for better visibility)
-MEDIC_COLOR = (0, 255, 0)
-BACKGROUND_COLOR = (0, 0, 0) # Black
+MEDIC_COLOR = (0, 255, 0)#Green
+JUGGERNAUGHT_COLOR = (153, 76, 0)#Brown
+BACKGROUND_COLOR = (76, 0, 153) # Purple
 
 
 FPS = 30 # Frames per second, adjusted for smoother movement
@@ -91,6 +92,12 @@ class Human(Entity):
        self.image.fill(ZOMBIE_COLOR)
        self.is_zombie = True
 
+   def turn_into_human(self):
+          self.image.fill(HUMAN_COLOR)
+          self.is_zombie = False
+
+    
+
 
 # --- Zombie Class ---
 class Zombie(Entity):
@@ -100,6 +107,12 @@ class Zombie(Entity):
    """
    def __init__(self, x, y):
        super().__init__(x, y, ZOMBIE_COLOR)
+       self.is_zombie = True
+   def turn_into_human(self):
+       self.image.fill(HUMAN_COLOR)
+       self.is_zombie = False
+       self.is_human = True
+       
 
 
 
@@ -108,14 +121,87 @@ class Medic(Entity):
          super().__init__(x,y, MEDIC_COLOR)
          self.is_zombie = False
 
-     #def turn_into_human(self):
-            #print() 
+     def is_medic():
+         Medic.is_medic = True
+
+     def update(self):
+    #    """
+    #    Updates the entity's position and handles screen boundaries.
+    #    """
+    #    # Move the entity by one CELL_SIZE in its current direction
+    #    self.rect.x += self.dx * CELL_SIZE
+    #    self.rect.y += self.dy * CELL_SIZE
+
+
+    #    # Boundary checks: Reverse direction if hitting screen edges
+    #    if self.rect.left < 0:
+    #        self.rect.left = 0
+    #        self.dx = 1 # Move right
+    #    elif self.rect.right > SCREEN_WIDTH:
+    #        self.rect.right = SCREEN_WIDTH
+    #        self.dx = -1 # Move left
+
+
+    #    if self.rect.top < 0:
+    #        self.rect.top = 0
+    #        self.dy = 1 # Move down
+    #    elif self.rect.bottom > SCREEN_HEIGHT:
+    #        self.rect.bottom = SCREEN_HEIGHT
+    #        self.dy = -1 # Move up
+
+       keys = pygame.key.get_pressed()
+       if keys[pygame.K_a]:
+           self.rect.x -= 20
+       if keys[pygame.K_d]:
+           self.rect.x += 20
+       if keys[pygame.K_w]:
+           self.rect.y -= 20
+       if keys[pygame.K_s]:
+           self.rect.y += 20
+
+       self.rect.x = max(0, min(self.rect.x, SCREEN_WIDTH - self.rect.width))
+       self.rect.y = max(0, min(self.rect.y, SCREEN_HEIGHT - self.rect.height))
+
+       
+               
+           
+           
+       
+           
+         
+
+     #def turn_into_zombie(self):
+         #self.image.fill(ZOMBIE_COLOR)
+         #self.is_zombie = True
 
 
      """
      Represents a human entity
    Can be converted into a zombie.
     """
+     
+     def turn_into_zombie(self):
+           """
+           Changes the human's appearance and state to a zombie.
+           """
+           self.image.fill(ZOMBIE_COLOR)
+           self.is_medic = False
+           self.is_zombie = True
+
+     def turn_into_human(self):
+          self.image.fill(HUMAN_COLOR)
+          self.is_zombie = False
+          self.is_human = True 
+
+
+    
+
+
+class Juggernaught(Entity):
+    def __init__(self, x, y):
+        super().__init__(x,y, JUGGERNAUGHT_COLOR)
+        self.is_zombie = True
+
 
 # --- Main Game Function ---
 def main():
@@ -133,11 +219,12 @@ def main():
    humans = pygame.sprite.Group()       # Group specifically for human entities
    zombies = pygame.sprite.Group()      # Group specifically for zombie entities
    medics = pygame.sprite.Group()
+   juggernaughts = pygame.sprite.Group()
 
 
    # --- Game Setup: Create Initial Entities ---
    # Create initial zombies
-   for _ in range(10): # Start with 10 zombies
+   for _ in range(5): # Start with 10 zombies
        x = random.randint(0, GRID_WIDTH - 1)
        y = random.randint(0, GRID_HEIGHT - 1)
        zombie = Zombie(x, y)
@@ -146,19 +233,27 @@ def main():
 
 
    # Create initial humans
-   for _ in range(40): # Start with 40 humans
+   for _ in range(5): # Start with 40 humans
        x = random.randint(0, GRID_WIDTH - 1)
        y = random.randint(0, GRID_HEIGHT - 1)
        human = Human(x, y)
        all_entities.add(human)
        humans.add(human)
 
-   for _ in range(5):
+   for _ in range(40):
        x = random.randint(0, GRID_WIDTH - 1)
        y = random.randint(0, GRID_HEIGHT - 1)
        medic = Medic(x, y)
        all_entities.add(medic)
        medics.add(medic)
+
+   for _ in range(5):
+       x = random.randint(0, GRID_WIDTH -1)
+       y = random.randint(0, GRID_HEIGHT - 1)
+       juggernaught = Juggernaught(x, y)
+       all_entities.add(juggernaught)
+       juggernaughts.add(juggernaught)
+       
 
 
 
@@ -181,23 +276,35 @@ def main():
            # spritecollide returns a list of all sprites in a group that have collided with the given sprite
            # The 'True' argument means that the collided human sprites will be removed from the 'humans' group
            collided_humans = pygame.sprite.spritecollide(zombie, humans, False) # Don't remove immediately
-
-
+           collided_medics = pygame.sprite.spritecollide(zombie, medics, True )
+           
+        
            for human in collided_humans:
                if not human.is_zombie: # Only infect if the human is not already a zombie
                    human.turn_into_zombie() # Change the human's state and color
                    humans.remove(human)     # Remove from humans group
                    zombies.add(human)       # Add to zombies group (now it's a zombie)
-       for medic in medics:
-           collided_zombies = pygame.sprite.spritecollide(medic, zombies, False )
-           for zombies in collided_zombies:
-                if human.is_zombie:
+           
+           for medic in collided_medics:
+               if human.is_zombie:
                    zombie.turn_into_human()
                    zombies.remove(zombie)
                    humans.add(human)
+               elif zombie.is_zombie:
+                   zombies.remove(zombie)
+                   humans.add(human)
+                   
+                   
+                #elif juggernaught.is_juggernaught:
+                   
 
-
-
+       for juggernaught in juggernaughts:
+           collided_juggernaughts = pygame.sprite.spritecollide(juggernaught, humans, False)
+           if not medic.is_zombie:
+               medic.turn_into_zombie()
+               medics.remove(medic)
+               zombies.add(medic)
+  
        # --- Drawing ---
        screen.fill(BACKGROUND_COLOR) # Fill the screen with black each frame
        all_entities.draw(screen)     # Draw all entities to the screen
